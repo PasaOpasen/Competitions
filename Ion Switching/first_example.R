@@ -154,10 +154,48 @@ ggplot(test_data %>% slice(seq(1,n(),300)),
        aes(x=time_batch,y=trend_res))+geom_point()+facet_grid(vars(batches))
 
 
+#find best combinations by plots
+tr=train_data %>% slice(seq(1,n(),600))
+te=test_data %>% slice(seq(1,n(),400))
+
+for(i in 0:3){
+  for(j in 0:9){
+    tmp=rbind(
+      tr %>% filter(batches==j) %>% select(time_batch,signal) %>% mutate(source='train'),
+      te %>% filter(batches==i) %>% select(time_batch,signal) %>% mutate(source='test')
+    )
+   pl= ggplot(tmp %>% mutate(source=factor(source)),
+           aes(x=time_batch,y=signal))+geom_point()+facet_wrap(source~.)
+   ggsave(paste0('test batch = ',i,' train batch = ',j,'.png'),pl)
+  }
+}
+
+
+# use optimal batches
+test_data$batches[test_data$batches==0]=6
+test_data$batches[test_data$batches==1]=4
+test_data$batches[test_data$batches==2]=6
+test_data$batches[test_data$batches==3]=0
 
 
 
+#best model predictions
 
+lda.model03 <- train(open_channels~trend_res+batches,data=train_data,method="lda",family="binomial", trControl=cv5,verbosity=T,metric="F1")
+
+res=predict(lda.model03,newdata = test_data)
+
+
+#writing_sample
+
+answer=read_csv(sample.path)
+
+answer$time=format(answer$time,nsmall = 4)
+#answer$open_channels=sample(0:10,answer$time %>% length(),replace = T)
+answer$open_channels=res
+
+
+write_csv(answer,paste0(data.path,"result.csv"))
 
 
 
