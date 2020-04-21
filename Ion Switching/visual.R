@@ -15,22 +15,22 @@ sample.path=paste0(data.path,'sample_submission','.csv')
 
 dt=read_csv(train.path)
 
-dt %>% summary()
+#dt %>% summary()
 
 dt %<>% mutate(chan=factor(open_channels,ordered = T),chan2=factor(paste0('l',open_channels)))
 
-dt$chan %>% summary()
+#dt$chan %>% summary()
 
 
-data=dt %>% group_by(chan) %>% slice(sample(1:n(),30000))
-ggplot(data,aes(x=time,y=signal,col=chan))+geom_point()
+data=dt %>% group_by(chan) %>% slice(sample(1:n(),40))
+ggplot(data,aes(x=time,y=signal,fill=chan))+geom_hex()+facet_grid(vars(chan),scales = "free")
 
 
-dt %>% slice(seq(1,n(),by=200)) %>% ggplot(aes(x=time,y=signal,col=chan))+geom_point()
+#dt %>% slice(seq(1,n(),by=200)) %>% ggplot(aes(x=time,y=signal,col=chan))+geom_point()
 
 
-simple.logres=lm(open_channels~signal+signal:time,dt)
-simple.logres %>% summary()
+#simple.logres=lm(open_channels~signal+signal:time,dt)
+#simple.logres %>% summary()
 
 
 
@@ -51,16 +51,17 @@ calcF1Scores=function(act,prd){
     return(mean(scores))
 }
 calcF1Scores2=function(act,prd){
-  #treats the vectors like classes
-  #act and prd must be whole numbers
-  df=data.frame(act=act,prd=prd);
+
   scores=numeric(11);
   lv=levels(prd)
   for(i in 0:10){
     ii=lv[i+1]
-    tp=nrow(df[df$prd==ii & df$act==ii,]);        
-    fp=nrow(df[df$prd==ii & df$act!=ii,]);
-    fn=nrow(df[df$prd!=ii & df$act==ii,]);
+    p= prd==ii
+    a= act==ii
+    
+    tp=sum(p & a);        
+    fp=sum(p & !a);
+    fn=sum(!p & a);
     
     scores[i+1]=(2*tp)/(2*tp+fp+fn)
   }      
@@ -85,16 +86,52 @@ tr=trainControl(
   )
 
 
-d=seq(1,nrow(dt),by=300)
+#d=seq(1,nrow(dt),by=300)
 
-fit.svm=train(x=data[c(1,2)],y=data$chan2,
-              method='lda2',
+
+al=getModelInfo()
+md=c()
+for(m in names(al)){
+  mod=al[[m]]
+  if(mod$type[1]=="Classification" & !any(mod$tags=="Two Class Only")){
+    md=c(md,m)
+  }
+}
+
+results=data.frame(name="id",res=0,time=0)
+
+for(f in md[4:8]){
+  
+  tryCatch({
+  
+  t=Sys.time()
+  fit=train(x=data[c(1,2)],y=data$chan2,#preProcess = c("center", "scale"),
+              method=f,
               trControl = tr,
               maximize = T,
               metric = 'F1')
+  
+  t=as.integer(Sys.time()-t)
+  
+  fit$resample$F1 %>% mean() %>% print()
+  
+  results=rbind(results,
+    data.frame(
+    name=f,
+    res=calcF1Scores2(dt$chan2,fit %>% predict(dt)),
+    time=t
+    ))
+  }, error = function(e) e)
+}
 
 
-calcF1Scores2(dt$chan2,fit.svm %>% predict(dt))
+
+fit.svm$resample$F1 %>% mean()
+
+#system.time(
+ calcF1Scores2(dt$chan2,fit.svm %>% predict(dt)) 
+#)
+
 
 
 
