@@ -37,12 +37,10 @@ f1 <- function (data, lev = NULL,model=NULL) {
 }
 
 
-
-
 data.path='D:/liverpool-ion-switching/'
 
-train.path=paste0(data.path,'train','.csv')
-test.path=paste0(data.path,'test','.csv')
+train.path=paste0(data.path,'train_clean','.csv')
+test.path=paste0(data.path,'test_clean','.csv')
 sample.path=paste0(data.path,'sample_submission','.csv')
 
 
@@ -53,6 +51,8 @@ test_data<-read_csv(test.path,col_types = 'dd')
 train_data$batches<- as.factor((train_data$time - 0.0001)%/%50)
 train_data$time_batch <- ((train_data$time - 0.0001)%%50)+0.0001
 
+test_data$batches<- factor((test_data$time - 0.0001)%/%50-10,levels=levels(train_data$batches))
+test_data$time_batch <- ((test_data$time - 0.0001)%%50)+0.0001
 
 
 #experiment predictions#####
@@ -111,7 +111,7 @@ train_data %<>%
    q4B = length(which(signal > 0 & signal < 1.5)==T), 
    #mB =mean(signal), 
    #maxB = max(signal), 
-   RollingMaxB10 = roll_max(signal, n = 10, fill=max(signal)), 
+   #RollingMaxB10 = roll_max(signal, n = 10, fill=max(signal)), 
   #abs_avgBs2 = (abs(min(signal)) + abs(max(signal)))/2, 
    
    #abs_avgB = (abs(min(signal)) + abs(max(signal)))/2,
@@ -128,10 +128,285 @@ for(name in colnames(train_data)){
   train_data[is.na(t) | is.nan(t),name]=0
 }
 
+
+#experiment https://www.kaggle.com/frankmollard/random-gbm-ion-shift-rfc####
+CenteredRoll <- function(DF, lags){
+  
+  Features = NULL
+  
+  for (l in lags) {
+    Start = Sys.time()
+    mea <-
+      RcppRoll::roll_mean(DF$signal,
+                          n = l,
+                          fill = NA,
+                          align = "center")
+    End = Sys.time()
+    print(End - Start)
+    
+    Start = Sys.time()
+    sdev <-
+      RcppRoll::roll_sd(DF$signal,
+                        n = l,
+                        fill = NA,
+                        align = "center")
+    End = Sys.time()
+    print(End - Start)
+    
+    Start = Sys.time()
+    maxi <-
+      RcppRoll::roll_max(DF$signal,
+                         n = l,
+                         fill = NA,
+                         align = "center")
+    
+    End = Sys.time()
+    print(End - Start)
+    
+    Start = Sys.time()
+    mini <-
+      RcppRoll::roll_min(DF$signal,
+                         n = l,
+                         fill = NA,
+                         align = "center")
+    End = Sys.time()
+    print(End - Start)
+    
+    Start = Sys.time()
+    Wmea <-
+      RcppRoll::roll_mean(
+        DF$signal,
+        n = l,
+        weights = c((1:((l-1)/2)) / ((l-1)/2 * ((l-1)/2 + 1) / 1)
+                    -max((1:((l-1)/2)) / ((l-1)/2 * ((l-1)/2 + 1) / 1))/((l-1)/2), 
+                    max((1:((l-1)/2)) / ((l-1)/2 * ((l-1)/2 + 1) / 1))*2,
+                    (((l-1)/2):1) / ((l-1)/2 * ((l-1)/2 + 1) / 1)
+                    -max((1:((l-1)/2)) / ((l-1)/2 * ((l-1)/2 + 1) / 1))/((l-1)/2)),
+        fill = NA,
+        align = "center"
+      )
+    
+    End = Sys.time()
+    print(End - Start)
+    
+    #medi,
+    Features <- cbind(Features, mea, sdev, maxi, mini, Wmea)
+    
+    
+    colnames(Features)[c(
+      (ncol(Features) - 4),
+      (ncol(Features) - 3),
+      (ncol(Features) - 2),
+      (ncol(Features) - 1),
+      ncol(Features))] <-
+      c(
+        paste("mea", l, sep = "_"),
+        paste("sdev", l, sep = "_"),
+        paste("max", l, sep = "_"),
+        paste("min", l, sep = "_"),
+        paste("Wmea", l, sep = "_")
+      )
+    
+    gc()
+    print(l)
+  }
+  
+  return(Features)
+}
+
+#right/left aligned stats
+
+LRRoll <- function(DF){
+  
+  LR = NULL
+  
+  l=100
+  right_W100 <- 
+    RcppRoll::roll_mean(
+      DF$signal,
+      n = l,
+      weights = (1:l) / (l * (l + 1) / 2),
+      fill = NA,
+      align = "right"
+    )
+  
+  left_W100 <- 
+    RcppRoll::roll_mean(
+      DF$signal,
+      n = l,
+      weights = (l:1) / (l * (l + 1) / 2),
+      fill = NA,
+      align = "left"
+    )
+  
+  l=1000
+  right_W1000 <- 
+    RcppRoll::roll_mean(
+      DF$signal,
+      n = l,
+      weights = (1:l) / (l * (l + 1) / 2),
+      fill = NA,
+      align = "right"
+    )
+  
+  left_W1000 <- 
+    RcppRoll::roll_mean(
+      DF$signal,
+      n = l,
+      weights = (l:1) / (l * (l + 1) / 2),
+      fill = NA,
+      align = "left"
+    )
+  
+  LR <- cbind(LR, right_W100, right_W1000, left_W100, left_W1000)
+  
+  return(LR)
+}
+
+specialFeatures <- function(DF){
+  
+  SFeatures = NULL
+  #Lags----------------------------------
+  L1 <- c(NA, DF$signal[1:(nrow(DF)-1)])
+  L2 <- c(c(NA,NA), DF$signal[1:(nrow(DF)-2)])
+  F1 <- c(DF$signal[2:nrow(DF)], NA)
+  F2 <- c(DF$signal[3:nrow(DF)], c(NA, NA))
+  
+  #specials----------------------------------------
+  dL1 <- c(NA, diff(DF$signal))
+  dF1 <- c(diff(DF$signal), NA)
+  signalAbs <- abs(DF$signal)
+  signalSquare <- DF$signal^2
+  signaleSqRo <- sign(DF$signal)*abs(DF$signal)^(1/2)
+  signale33 <- sign(DF$signal)*abs(DF$signal)^(1/3)
+  e <- exp(DF$signal)
+  
+  SFeatures <- cbind(SFeatures, L1, L2, F1, F2, dL1, dF1, signalAbs, signalSquare, signaleSqRo, signale33, e)
+  
+  return(SFeatures)
+}
+
+lags = c(11, 51, 101, 1001, 10001)
+
+###FE Train
+RollFeat <- CenteredRoll(train_data, lags)
+LRFeat <- LRRoll(train_data)
+specials <- specialFeatures(train_data)
+DF_tr <- cbind(train_data, RollFeat, LRFeat, specials)
+rm(RollFeat, LRFeat, specials)
+#mean center
+#DF_tr$signal_M1001 <- DF_tr$signal - DF_tr$mea_1001#centered mean
+DF_tr$signal_M101 <- DF_tr$signal - DF_tr$mea_101
+
+#BATCH SLICES
+DF_tr$batch <- DF_tr$time %/%10
+
+batch75 <- aggregate(signal~batch, data = DF_tr, FUN = quantile, probs = .75)
+colnames(batch75)[2] <- "signal75"
+DF_tr <- merge(x = DF_tr, y = batch75, by = "batch", all.x = T)
+
+batch25 <- aggregate(signal~batch, data = DF_tr, FUN = quantile, probs = .25)
+colnames(batch25)[2] <- "signal25"
+DF_tr <- merge(x = DF_tr, y = batch25, by = "batch", all.x = T)
+
+batchMax <- aggregate(signal~batch, data = DF_tr, FUN = max)
+colnames(batchMax)[2] <- "signalMax"
+DF_tr <- merge(x = DF_tr, y = batchMax, by = "batch", all.x = T)
+
+batchMin <- aggregate(signal~batch, data = DF_tr, FUN = min)
+colnames(batchMin)[2] <- "signalMin"
+DF_tr <- merge(x = DF_tr, y = batchMin, by = "batch", all.x = T)
+
+DF_tr <- DF_tr[order(DF_tr$time),]
+
+#Upper Lower Difference
+DF_tr$UL <- DF_tr$max_1001 - DF_tr$min_1001
+
+
+summary(DF_tr)
+
+#Complete
+#DF_tr <- DF_tr[complete.cases(DF_tr),]
+
+rm(batch75, batch25, batchMax, batchMin, train)
+gc()
+
+##########Test
+RollFeat <- CenteredRoll(test_data, lags)
+LRFeat <- LRRoll(test_data)
+specials <- specialFeatures(test_data)
+DF_te <- cbind(test_data, RollFeat, LRFeat, specials)
+rm(RollFeat, LRFeat, specials)
+#mean center
+DF_te$signal_M1001 <- DF_te$signal - DF_te$mea_1001#centered mean
+DF_te$signal_M101 <- DF_te$signal - DF_te$mea_101
+
+#BATCH SLICES
+
+DF_te$batch <- DF_te$time %/%10
+#DF_tr$batch <- round(DF_tr$time/10, digits = 0)  
+
+batch75 <- aggregate(signal~batch, data = DF_te, FUN = quantile, probs = .75)
+colnames(batch75)[2] <- "signal75"
+DF_te <- merge(x = DF_te, y = batch75, by = "batch", all.x = T)
+
+batch25 <- aggregate(signal~batch, data = DF_te, FUN = quantile, probs = .25)
+colnames(batch25)[2] <- "signal25"
+DF_te <- merge(x = DF_te, y = batch25, by = "batch", all.x = T)
+
+batchMax <- aggregate(signal~batch, data = DF_te, FUN = max)
+colnames(batchMax)[2] <- "signalMax"
+DF_te <- merge(x = DF_te, y = batchMax, by = "batch", all.x = T)
+
+batchMin <- aggregate(signal~batch, data = DF_te, FUN = min)
+colnames(batchMin)[2] <- "signalMin"
+DF_te <- merge(x = DF_te, y = batchMin, by = "batch", all.x = T)
+
+
+DF_te <- DF_te[order(DF_te$time),]
+
+#Upper Lower Difference
+DF_te$UL <- DF_te$max_1001 - DF_te$min_1001
+
+#Complete
+#DF_te <- DF_te[complete.cases(DF_te),]
+#DF_te %<>% mice::mice(method = "mean") %>% mice::complete()
+rm(batch75, batch25, batchMax, batchMin, test)
+gc()
+
+
+
+
+
+DF_tr <- as.data.frame(DF_tr)
+DF_te <- as.data.frame(DF_te)
+
+DF_tr <- DF_tr[DF_tr$time > 0 & DF_tr$time <= 500,-which(colnames(DF_tr) %in% c("time", "batch"))]
+DF_te <- DF_te[DF_te$time > 500 & DF_te$time <= 700,-which(colnames(DF_te) %in% c("time", "batch"))]
+#DF_tr <- cbind(DF_tr, RFCTr)
+#DF_te <- cbind(DF_te, RFCTe)
+#rm(RFCTr, RFCTe)
+
+gc()
+
+DF_tr$open_channels <- as.factor(DF_tr$open_channels)
+
+
+
+write_csv(DF_tr,"newtrain.csv")
+write_csv(DF_te,"newtest.csv")
+
+
+DF_te <- DF_tr[complete.cases(DF_tr),]
+write_csv(DF_tr[sample(1:nrow(DF_tr),nrow(DF_tr)/100),],"newtrainsample(50).csv")
+
+
 ############
 
+ggplot(train_data %>% dplyr::slice(seq(1,n(),400)),
+       aes(x=time,y=signal,col=open_channels))+geom_point()
 
-ggplot(train_data %>% slice(seq(1,n(),400)),
+ggplot(train_data %>% dplyr::slice(seq(1,n(),400)),
        aes(x=time_batch,y=signal,col=open_channels))+geom_point()+facet_grid(vars(batches))
 
 
@@ -180,6 +455,8 @@ ggplot(train_data %>% slice(seq(1,n(),400)),
        aes(x=time_batch,y=trend_res,col=open_channels))+geom_point()+facet_grid(vars(batches))
 
 
+corrplot::corrplot(cor(train_data[,sapply(train_data,is.numeric)]))
+
 
 #modeling####
 
@@ -198,7 +475,9 @@ f1(data.frame(obs=test$open_channels,pred=lda.valid02))
 lda.model03 <- train(open_channels~trend_res+batches,data=train,method="lda",family="binomial", trControl=cv5,verbosity=T,metric="F1")
 lda.model03
 
-lda.model03=train(open_channels~trend_res+trend_spl+time_batch+batch,
+
+lda.model03=train(open_channels~trend_res+time_batch+batches+
+                    signale33+mKsmoo2+cls1+cls2+cls3+RollingMeanB10,
                   data=train,
                   method="lda",
                   family="binomial", 
@@ -230,9 +509,9 @@ f1(data.frame(obs=test$open_channels,pred=lda.valid03))
 #
 
 ######## default batches
-test_data$batches<- factor((test_data$time - 0.0001)%/%50-10,levels=levels(train_data$batches))
+#test_data$batches<- factor((test_data$time - 0.0001)%/%50-10,levels=levels(train_data$batches))
 
-test_data$time_batch <- ((test_data$time - 0.0001)%%50)+0.0001
+#test_data$time_batch <- ((test_data$time - 0.0001)%%50)+0.0001
 
 ggplot(test_data %>% slice(seq(1,n(),300)),
        aes(x=time_batch,y=signal))+geom_point()+facet_grid(vars(batches))
@@ -290,11 +569,22 @@ for(i in 0:3){
 test_data$batches[test_data$batches==0]=7
 test_data$batches[test_data$batches==1]=4
 test_data$batches[test_data$batches==2]=6
-test_data$batches[test_data$batches==3]=2
+test_data$batches[test_data$batches==3]=1
 
 
 
 #best model predictions
+
+
+
+
+
+
+
+
+
+
+
 
 #как сделать retrain модели?
 
@@ -312,7 +602,7 @@ answer$time=format(answer$time,nsmall = 4)
 answer$open_channels=res
 
 
-write_csv(answer,paste0(data.path,"result7462.csv"))
+write_csv(answer,paste0(data.path,"result7461.csv"))
 
 
 
