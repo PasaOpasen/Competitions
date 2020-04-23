@@ -5,9 +5,11 @@ library(magrittr)
 
 
 path.dir='./ignore_data/'
-test.dir=paste0(path.dir,'newtest.csv')
-train.dir=paste0(path.dir,'newtrain.csv')
+#test.dir=paste0(path.dir,'newtest.csv')
+#train.dir=paste0(path.dir,'newtrain.csv')
 
+test.dir=paste0(path.dir,'newtest_pca.csv')
+train.dir=paste0(path.dir,'newtrain_pca.csv')
 
 tst=read_csv(test.dir)
 trn=read_csv(train.dir)
@@ -109,6 +111,7 @@ test<-trn[id_test,]
 
 
 control <- trainControl(method="cv",number=5,summaryFunction = f1,verboseIter = T)
+
 
 lda.fit=train(open_channels~PC1+PC2+PC3+PC4+PC5,
                   data=train,
