@@ -37,6 +37,17 @@ f1 <- function (data, lev = NULL,model=NULL) {
 }
 
 
+f1_ <- function (obs,pred, lev = NULL,model=NULL) {
+  cm<-as.matrix(table(actual=obs,predicted=pred))
+  diag<-diag(cm)
+  rowsums<-apply(cm,1,sum)
+  colsums<-apply(cm,2,sum)
+  precision <- ifelse(colsums==0,0,diag/colsums)
+  recall  <- ifelse(rowsums==0,0,diag/rowsums)
+  return(mean(ifelse(precision+recall==0,0,2*precision*recall/(precision+recall)))) 
+}
+
+
 data.path='D:/liverpool-ion-switching/'
 
 train.path=paste0(data.path,'train_clean','.csv')

@@ -127,9 +127,12 @@ accshow(lda.fit,test)
 accshow(lda.fit,rbind(train,test))
 accshow(lda.fit,trn)
 
+
+
+
 lda.fit=train(open_channels~PC1+PC2+PC3+PC4+PC5,
               data=trn, #rbind(train,test),
-              method="lda",
+              method="mda",
               family="binomial", 
               trControl=control,
               verbosity=T,
@@ -137,7 +140,6 @@ lda.fit=train(open_channels~PC1+PC2+PC3+PC4+PC5,
 
 
 ggplot(varImp(lda.fit))
-
 
 
 
@@ -153,7 +155,7 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'result_lda_wideversa.csv'))
+write_csv(answer,paste0(path.dir,'result_svmLinear220000_7pc.csv'))
 
 
 

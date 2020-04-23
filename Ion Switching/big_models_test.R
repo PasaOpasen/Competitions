@@ -1,8 +1,24 @@
 
+id_train=numeric()
+id_test=numeric()
+als=1:5000000
+for(i in 0:10){
+  id= als[trn$open_channels==i]
+  id=id[sample(1:length(id),200)]
+  id2<-createDataPartition(id,p = 0.8,list = F)[,1]
+  id_train=c(id_train,id[id2])
+  id_test=c(id_test, id[-id2])
+}
+
+train<-trn[id_train,]
+test<-trn[id_test,]
+
+
+
+
 
 models=c(
-  #'bagEarthGCV',
-  #'cforest',
+ 'lda'#,  just for comparation 0.938 0.914
   #'xgbDART',
   #'evtree',
   #'
@@ -10,27 +26,20 @@ models=c(
   #'
   #'ordinalRF',
   #'rfRules',
-  #'RRF',
+  #'RRF', 0.9273437  0.9172741
   #'gbm_h2o',
-  #'smda',
-  #'gaussprLinear',
+ #'smda',
+ # 'gaussprLinear',
   #'gaussprPoly',
- # 'gaussprRadial',
+   #'gaussprRadial',
   #'ORFsvm',
   #'ordinalNet',
   #'smda',
- # 'ORFpls',
+   #'ORFpls',
   #'ORFridge',
-  #'ORFsvm',
   #'FH.GBML',
-  #'protoclass',
-  'kknn',
-  'knn',
-  'lvq',
-  'pam',
-  'ownn',
-  'snn'
-         )
+  #'snn'
+)
 
 
 rs=list()
@@ -57,16 +66,14 @@ for(ft in models){
   
   t=Sys.time()-t
   
-  v=f1(data.frame(obs=test$open_channels,pred=predict(lda.fit,newdata = test)))
+  v=f1_(obs=test$open_channels,pred=predict(lda.fit,newdata = test))
   
-  rs[[ft]]=list(fit=ft,result=v,time=t)
+  rs[[ft]]=list(fit=ft,
+                result=v,
+                big_result=f1_(obs=trn$open_channels,pred=predict(lda.fit,newdata = trn)),
+                time=t)
   print(rs)
 }
-
-
-
-
-
 
 
 
