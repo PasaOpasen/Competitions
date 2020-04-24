@@ -33,7 +33,7 @@ f1 <- function (data, lev = NULL,model=NULL) {
   f1<- ifelse(precision+recall==0,0,2*precision*recall/(precision+recall))
   f1_val <- mean(f1)
   names(f1_val) <- c("F1")
-  f1_val
+  return(f1_val)
 }
 
 

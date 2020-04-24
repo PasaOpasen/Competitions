@@ -1,4 +1,22 @@
 
+# на большом наборе данных пиздец как долго обучается
+# даже если указать чисто обучение с известным тюном
+#
+# а предсказывает еще дольше:
+# если на обучении брать по 1000 с каждого класса (что пиздец как мало)
+# 2млн будет предсказывать почти полчаса
+#
+#
+#
+#
+#
+#
+#
+#
+
+
+
+
 library(doParallel)
 
 load("info for best lda and svms.rdata")
@@ -76,7 +94,7 @@ svmRadialCost$bestTune
 id=numeric()
 for(i in 0:10){
   s= als[trn$open_channels==i]
-  id= c(id,s[sample(1:length(s),10000)]) #+50*i
+  id= c(id,s[sample(1:length(s),5000)]) #+50*i
 }
 
 lda.fit=train(open_channels ~ PC1 + PC2 + PC3 + PC4 + PC5+ PC6+PC7+
@@ -101,10 +119,13 @@ lda.fit=train(open_channels ~ PC1 + PC2 + PC3 + PC4 + PC5+ PC6+PC7+
               #verbosity=T,
               metric="F1")
 
+system.time(
+ lda.fit %>% predict(newdata = tst[1:10000,]) # 5.15 для модели по 1000, 7.42 для 2000, 9.5 для 3000, 13 для 5000
+)
 
 
 
-res=lda.fit %>% predict(newdata = tst)
+res=lda.fit %>% predict(newdata = tst)#[1:1000,]
 
 
 #writing_sample
