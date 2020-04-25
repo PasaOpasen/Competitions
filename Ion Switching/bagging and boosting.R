@@ -1,4 +1,7 @@
-library(doParallel)
+
+
+cv1=trainControl(method="cv",number=6,summaryFunction = f1)
+cv2=trainControl(method = 'none',verboseIter = T)
 
 id_train=numeric()
 id_test=numeric()
@@ -17,15 +20,34 @@ test<-trn[id_test,]
 
 
 models=c(
- # 'mda',
-  #'pda',
-  #'qda',
-  #'rda',
-  #'sda',
-  #'Mlda',
-  #'qda',
-  #'rmda',
-  'slda'
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+'',
+''
 )
 
 
@@ -33,9 +55,6 @@ models=c(
 for(ft in models){
   
   t=proc.time()
-  
-  cl <- makePSOCKcluster(6)
-  registerDoParallel(cl)
   
   lda.fit=train(open_channels ~ PC1 + PC2 + PC3 + PC4 + PC5+ #PC6+PC7+
                   sin(signal)+cos(signal)+
@@ -57,21 +76,15 @@ for(ft in models){
   
   
   t=proc.time()-t
-  stopCluster(cl)
   
   cat('calculating........\n')
   
   nw=data.frame(
     name=ft,
     test_res=f1_(obs=test$open_channels,pred=predict(lda.fit,newdata = test)),
-    #big_res= f1_(obs=trn$open_channels,pred=predict(lda.fit,newdata = trn)),
     time=as.numeric(t)[3])
   
   rs=rbind(rs,nw) 
   
   print(rs)
 }
-
-
-
-
