@@ -15,6 +15,9 @@ tst=read_csv(test.dir)
 trn=read_csv(train.dir)
 
 
+trn %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+
 # delete bad predictors
 
 inds=nearZeroVar(tst)
@@ -58,9 +61,23 @@ trn=cbind(trn[,1:4],predict(mt,trn[,-c(1:4)]))
 tst=cbind(tst[,1:3],predict(mt,tst[,-c(1:3)]))
 
 
-
 write_csv(trn,paste0(path.dir,'newtrain_pca.csv'))
 write_csv(tst,paste0(path.dir,'newtest_pca.csv'))
+
+
+# boxcox
+
+#trn %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+#tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+
+#mt=preProcess(trn[,c(1,12)],method='BoxCox',verbose = T)
+
+#trn[,-c(2:4)]=predict(mt,trn[,-c(2:4)])
+#tst[,-c(2:3)]=predict(mt,tst[,-c(2:3)])
+
+
+#write_csv(trn,paste0(path.dir,'newtrain_pca.csv'))
+#write_csv(tst,paste0(path.dir,'newtest_pca.csv'))
 
 
 
@@ -91,9 +108,9 @@ accshow=function(.fit, df){
   f1(data.frame(obs=df$open_channels,pred=ldafit)) %>% print()
 }
 
-
-
 trn %<>% mutate(open_channels=factor(open_channels))
+
+
 
 id_train=numeric()
 id_test=numeric()
