@@ -350,3 +350,15 @@ MigrationBackup/
 .ionide/
 
 /Ion Switching/ignore_data/
+/Ion Switching/.Rproj.user/270F10D8/ctx/ctx-25581/environment
+/Ion Switching/ignore_data/newtest(median).csv
+/Ion Switching/ignore_data/newtest.csv
+/Ion Switching/ignore_data/newtest_pca.csv
+/Ion Switching/ignore_data/newtrain.csv
+/Ion Switching/ignore_data/newtrain_pca.csv
+/Ion Switching/ignore_data/train_clean.csv
+/Ion Switching/mda_box subclasses = 5  n = 16000.rdata
+/Ion Switching/parRF mtry=2 count = 20000.rdata
+/Ion Switching/parRF mtry=3 count = 20000.rdata
+/Ion Switching/parRF mtry=3 count = 22000.rdata
+/Ion Switching/rf mtry=2 count = 22000.rdata

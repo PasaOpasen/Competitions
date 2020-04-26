@@ -40,7 +40,8 @@ write_csv(tst,paste0(path.dir,'newtest.csv'))
 write_csv(trn,paste0(path.dir,'newtrain_pca.csv'))
 write_csv(tst,paste0(path.dir,'newtest_pca.csv'))
 
-
+cv1=trainControl(method="cv",number=6,summaryFunction = f1,verboseIter = T)
+cv2=trainControl(method = 'none',verboseIter = T)
 
 # replace NA by median
 

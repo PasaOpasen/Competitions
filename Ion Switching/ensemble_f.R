@@ -32,10 +32,12 @@ test.inds=id
 
 # models
 
+models=c('lda2','rf','sda')
+
 fits=list()
 scores=numeric()
 
-for(k in 1:15){
+for(k in 3:length(models)){
   
   id=numeric()
   for(i in 0:10){
@@ -49,10 +51,10 @@ for(k in 1:15){
                   sin(2*signal)+cos(2*signal)
                 ,
                 data=trn[id,],
-                method="lda2",
-                family="binomial", 
+                method=models[k],
+                #family="binomial", 
                 trControl=control,
-                verbosity=T,
+                #verbosity=T,
                 metric="F1")
   
   
@@ -134,4 +136,84 @@ system.time(
 
 
 
+
+
+
+
+# first ensemble ####
+
+
+id=numeric()
+for(i in 0:10){
+  s= als[trn$open_channels==i]
+  id= c(id,s[sample(1:length(s),12000)]) #+50*i
+}
+
+lda2_=train(open_channels~PC1+PC2+PC3+PC4+PC5+PC6+PC7+signal+signal2+
+                  sin(signal)+cos(signal)+
+                  sin(PC1)+cos(PC1)+
+                  sin(2*signal)+cos(2*signal)
+                ,
+                data=trn[id,],
+                method='lda2',
+                #family="binomial", 
+                trControl=cv2,
+                tuneGrid=expand.grid(dimen=6),
+                #verbosity=T,
+                metric="F1")
+
+id=numeric()
+for(i in 0:10){
+  s= als[trn$open_channels==i]
+  id= c(id,s[sample(1:length(s),12000)]) #+50*i
+}
+
+rf_=train(open_channels~PC1+PC2+PC3+PC4+PC5+PC6+PC7+signal+signal2+
+             sin(signal)+cos(signal)+
+             sin(PC1)+cos(PC1)+
+             sin(2*signal)+cos(2*signal)
+           ,
+           data=trn[id,],
+           method='rf',
+           #family="binomial", 
+           trControl=cv2,
+           tuneGrid=expand.grid(mtry=2),
+           #verbosity=T,
+           metric="F1")
+
+
+id=numeric()
+for(i in 0:10){
+  s= als[trn$open_channels==i]
+  id= c(id,s[sample(1:length(s),12000)]) #+50*i
+}
+
+sda_=train(open_channels~PC1+PC2+PC3+PC4+PC5+PC6+PC7+signal+signal2+
+           sin(signal)+cos(signal)+
+           sin(PC1)+cos(PC1)+
+           sin(2*signal)+cos(2*signal)
+         ,
+         data=trn[id,],
+         method='sda',
+         #family="binomial", 
+         trControl=cv2,
+         tuneGrid=expand.grid(lambda=0.5,diagonal=F),
+         #verbosity=T,
+         metric="F1")
+
+
+
+res=ensemble.predict(list(lda2_,rf_,sda_),scores-0.924,tst)
+
+
+answer=read_csv(paste0(path.dir,'sample_submission.csv'))
+
+answer$time=format(answer$time,nsmall = 4)
+
+answer$open_channels=res
+
+write_csv(answer,paste0(path.dir,'lda2 rf sda count = 12000.csv'))
+
+
+save(lda2_, rf_, sda_,file='lda2 rf sda count = 12000.csv')
 
