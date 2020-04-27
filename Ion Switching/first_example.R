@@ -37,7 +37,7 @@ f1 <- function (data, lev = NULL,model=NULL) {
 }
 
 
-f1_ <- function (obs,pred, lev = NULL,model=NULL) {
+f1_ <- function (obs,pred) {
   cm<-as.matrix(table(actual=obs,predicted=pred))
   diag<-diag(cm)
   rowsums<-apply(cm,1,sum)
