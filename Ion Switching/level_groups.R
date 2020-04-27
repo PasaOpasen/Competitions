@@ -47,6 +47,45 @@ ggplot(tst %>% group_by(level_type)%>% slice(sample(1:n(),min(4000,n()))),aes(x=
 
 
 
+# нужно узнать, какие более репрезентативные в плане медианы (по количеству)
+trn %>% group_by(level_type, open_channels) %>% summarise(count = n())
+
+l1_5=trn %>% filter(open_channels==5 & level_type==1) %>% select(signal) %$% signal
+l2_5=trn %>% filter(open_channels==5& level_type==2) %>% select(signal) %$% signal
+
+t.test(l1_5)
+
+t.test(l2_5)
+
+m1=mean(l1_5)
+m2=mean(l2_5)
+
+
+trn %<>% mutate(supersignal=ifelse(level_type==2,signal, signal+(m2-m1))) 
+tst %<>% mutate(supersignal=ifelse(level_type==2,signal, signal+(m2-m1))) 
+
+
+
+ggplot(trn %>% group_by(open_channels,level_type) %>% slice(sample(1:n(),min(1000,n()))),
+       aes(x=time_batch,y=supersignal,col=open_channels))+geom_point()+
+  facet_wrap(level_type~.)+
+  #facet_wrap(batches~.,scales = 'free')+
+  theme_bw()
+
+
+ggplot(tst %>% group_by(level_type)%>% slice(sample(1:n(),min(4000,n()))),
+       aes(x=time_batch,y=supersignal))+geom_point()+
+  facet_wrap(level_type~.)+
+  #facet_wrap(batches~.,scales = 'free')+
+  theme_bw()
+
+
+
+
+
+write_csv(trn,paste0(path.dir,'trainsuper.csv'))
+write_csv(tst,paste0(path.dir,'testsuper.csv'))
+
 
 
 

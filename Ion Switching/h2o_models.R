@@ -3,9 +3,12 @@ library(magrittr)
 
 path.dir='./ignore_data/'
 
-trn=read_csv(paste0(path.dir,'train_clean.csv'))
-tst=read_csv(paste0(path.dir,'newtest_pca.csv'))
-tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+#trn=read_csv(paste0(path.dir,'train_clean.csv'))
+#tst=read_csv(paste0(path.dir,'newtest_pca.csv'))
+#tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+
+trn=read_csv(paste0(path.dir,'trainsuper.csv'))
+tst=read_csv(paste0(path.dir,'testsuper.csv'))
 
 als=1:nrow(trn)
 
