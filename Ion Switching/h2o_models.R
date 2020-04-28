@@ -10,16 +10,25 @@ path.dir='./ignore_data/'
 trn=read_csv(paste0(path.dir,'trainsuper.csv'))
 tst=read_csv(paste0(path.dir,'testsuper.csv'))
 
+trn %<>% mutate(signal2=sign(supersignal)*sqrt(abs(supersignal))) 
+tst %<>% mutate(signal2=sign(supersignal)*sqrt(abs(supersignal))) 
+
 als=1:nrow(trn)
 
 
 #trn %>% group_by(factor(open_channels)) %>% summarise(count=n())
+#trn %>% group_by(factor(level_type)) %>% summarise(count=n())
+#trn %>% group_by(factor(level_type),factor(open_channels)) %>% summarise(count=n())
 
 # test inds
 id=numeric()
-for(i in 0:10){
-  s= als[trn$open_channels==i]
-  id= c(id,s[sample(1:length(s),min(60000,length(s)))]) #+50*i
+for(lev in 1:2){
+  
+  for(i in 0:10){
+  s= als[trn$open_channels==i & trn$level_type==lev]
+  id= c(id,s[sample(1:length(s),min(50000,length(s)))]) #+50*i
+}
+
 }
 
 
@@ -51,15 +60,17 @@ accshow=function(fit,df,get.matrix=F){
 
 
 
-
 #trn=data.table::fread(paste0(path.dir,'train_clean.csv')) %>% as.h2o()
-trn=trn[id,-c(3,4)] %>% as.h2o()
-tst=tst[,c(1,4:11)] %>% as.h2o()
-trn[,2]=as.factor(trn[,2])
+trn=trn[id,-c(1,3,4)] %>% as.h2o()
+tst=tst[,-c(1:3)] %>% as.h2o()
+
+trn[,1]=as.factor(trn[,1])
+trn[,10]=as.factor(trn[,10])
+tst[,8]=as.factor(tst[,8])
 
 #set.seed(1998)
 
-p = h2o.splitFrame(data=trn,ratios = 0.9,seed=1)
+p = h2o.splitFrame(data=trn,ratios = 0.9)
 
 train=p[[1]]
 test=p[[2]]
@@ -94,9 +105,9 @@ gbm_grid <- h2o.grid(
 
 
 fit_gbm <- h2o.gbm(
-  x = colnames(train)[-c(2)] , 
+  x = colnames(train)[-c(1,9,10)] , 
   y = 'open_channels', 
-  training_frame =  train, # trn,   
+  training_frame =  train,  # trn,  
   validation_frame = test,
   
   #nfolds = 5,
@@ -109,7 +120,7 @@ fit_gbm <- h2o.gbm(
   min_rows = 10,
   learn_rate = 0.1,
   learn_rate_annealing = 1,
-  col_sample_rate = 0.8,
+  col_sample_rate = 1,
   sample_rate = 0.9,
   ntrees = 70,
   score_tree_interval = 10#,
@@ -124,9 +135,9 @@ gc()
 
 
 fit_rf <- h2o.randomForest(
-  x = colnames(train)[-c(2)] , 
+  x = colnames(train)[-c(1)] , 
   y = 'open_channels', 
-  training_frame =  train, # trn,   
+  training_frame = train,  # trn,   
   validation_frame = test,
   balance_classes = T,
   
@@ -150,7 +161,7 @@ accshow(fit_rf,test,F)
 #sp=sort(sample(1:2000000,2000))
 #res0=predict(fit_gbm, newdata= tst[sp,])$predict%>% as.data.frame()
 
-res = (predict(fit_rf, newdata= tst)$predict %>% as.data.frame())$predict# %>% as.numeric() -1
+res = (predict(fit_gbm, newdata= tst)$predict %>% as.data.frame())$predict# %>% as.numeric() -1
 
 
 
@@ -160,7 +171,7 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'fit_rf 60000.csv'))
+write_csv(answer,paste0(path.dir,'fit_gbm super all.csv'))
 
 
 
