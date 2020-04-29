@@ -85,7 +85,7 @@ fit_gbm <- h2o.gbm(
   min_rows = 10,
   learn_rate = 0.1,
   learn_rate_annealing = 0.99,
-  col_sample_rate = 1,
+  col_sample_rate = 0.8,
   sample_rate = 0.9,
   ntrees = 40,
   score_tree_interval = 10#,
