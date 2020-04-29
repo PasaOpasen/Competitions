@@ -9,9 +9,9 @@ ggplot(trn,aes(y=signal))+
 trn %<>% mutate(outliers=F)
 als=1:nrow(trn)
 
-for(btc in 0:9){
+for(lv in 0:1){
   for(ch in 0:10){
-    id = als[trn$open_channels == ch & trn$batches == btc] 
+    id = als[trn$open_channels == ch & trn$level == lv] 
     
     if(length(id)==0){
       next
@@ -25,7 +25,7 @@ for(btc in 0:9){
     
     trn$outliers[id[ind]]=T
     
-    cat('batch = ',btc,' chan = ',ch,' len = ',length(ind),'\n')
+    cat('level = ',lv,' chan = ',ch,' len = ',length(ind),'\n')
   }
 }
 sum(trn$outliers)/nrow(trn)
@@ -53,6 +53,6 @@ ggplot()+
 
 
 
-write_csv(trn %>% filter(outliers==F) %>% select(-outliers),path=paste0(path.dir,'train_clean.csv'))
+write_csv(trn %>% filter(outliers==F) %>% select(-outliers),path=paste0(path.dir,'train_last_clean.csv'))
 
 

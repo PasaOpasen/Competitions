@@ -30,7 +30,9 @@ ggplot(tst %>% group_by(batches)%>% slice(sample(1:n(),min(4500,n()))),aes(x=tim
 
 
 trn %<>% mutate(level_type=ifelse(batches %in% c(4,9),1,2) %>% factor()) 
-tst %<>% mutate(level_type=ifelse(batches==1 & (time_batch<=10 |(time_batch>=20 & time_batch<=30) ),1,2) %>% factor()) 
+tst %<>% mutate(level_type=ifelse(
+  (batches==1 &  time_batch<=30) | (batches==0 & (time_batch > 20 & time_batch <= 30))
+                                                ,1,2) %>% factor()) 
 
 
 ggplot(trn %>% group_by(open_channels,level_type) %>% slice(sample(1:n(),min(1000,n()))),aes(x=time_batch,y=signal,col=open_channels))+geom_point()+

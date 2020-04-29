@@ -26,7 +26,11 @@ for(lev in 1:2){
   
   for(i in 0:10){
   s= als[trn$open_channels==i & trn$level_type==lev]
-  id= c(id,s[sample(1:length(s),min(50000,length(s)))]) #+50*i
+  
+  if(length(s)>0){
+    id= c(id,s[sample(1:length(s),min(50000,length(s)))])
+  }
+
 }
 
 }
@@ -61,19 +65,29 @@ accshow=function(fit,df,get.matrix=F){
 
 
 #trn=data.table::fread(paste0(path.dir,'train_clean.csv')) %>% as.h2o()
-trn=trn[id,-c(1,3,4)] %>% as.h2o()
-tst=tst[,-c(1:3)] %>% as.h2o()
+trn=trn[id,-c(1,3,4)] 
+tst=tst[,-c(1:3)]
 
-trn[,1]=as.factor(trn[,1])
-trn[,10]=as.factor(trn[,10])
-tst[,8]=as.factor(tst[,8])
+trn1= trn %>% filter(level_type==1) %>% select(-level_type,-level1,-level2) %>% as.h2o()
+trn2= trn %>% filter(level_type==2) %>% select(-level_type,-level1,-level2) %>% as.h2o()
+tst1=tst %>%  filter(level_type==1) %>% select(-level_type,-level1,-level2) %>% as.h2o()
+tst2=tst %>%  filter(level_type==2) %>% select(-level_type,-level1,-level2) %>% as.h2o()
+
+trn1[,1]=as.factor(trn1[,1]); trn2[,1]=as.factor(trn2[,1]);
+#trn[,10]=as.factor(trn[,10])
+#tst[,8]=as.factor(tst[,8])
 
 #set.seed(1998)
 
-p = h2o.splitFrame(data=trn,ratios = 0.9)
+p = h2o.splitFrame(data=trn1,ratios = 0.8)
 
-train=p[[1]]
-test=p[[2]]
+train1=p[[1]]
+test1=p[[2]]
+
+p = h2o.splitFrame(data=trn2,ratios = 0.8)
+
+train2=p[[1]]
+test2=p[[2]]
 
 #train %>% as.data.frame() %>% group_by(open_channels) %>% summarise(count=n())
 #test %>% as.data.frame() %>% group_by(open_channels) %>% summarise(count=n())
@@ -104,11 +118,11 @@ gbm_grid <- h2o.grid(
 
 
 
-fit_gbm <- h2o.gbm(
-  x = colnames(train)[-c(1,9,10)] , 
+fit_gbm2 <- h2o.gbm(
+  x = colnames(train2)[-c(1)] , 
   y = 'open_channels', 
-  training_frame =  train,  # trn,  
-  validation_frame = test,
+  training_frame =  train2,  #   trn2,
+  validation_frame = test2,
   
   #nfolds = 5,
   #fold_assignment = 'Stratified',
@@ -119,38 +133,71 @@ fit_gbm <- h2o.gbm(
   max_depth = 6,
   min_rows = 10,
   learn_rate = 0.1,
-  learn_rate_annealing = 1,
+  learn_rate_annealing = 0.99,
   col_sample_rate = 1,
   sample_rate = 0.9,
-  ntrees = 70,
+  ntrees = 35,
   score_tree_interval = 10#,
   #stopping_metric = 'misclassification',
  # stopping_tolerance = 0.005
   )
 
-accshow(fit_gbm,test,F)
+accshow(fit_gbm2,test2,T)
+
+
+
+fit_gbm1 <- h2o.gbm(
+  x = colnames(train2)[-c(1)] , 
+  y = 'open_channels', 
+  training_frame =  train1,  # trn,  
+  validation_frame = test1,
+  
+  #nfolds = 5,
+  #fold_assignment = 'Stratified',
+  
+  #verbose = T,
+  balance_classes = T,
+  #class_sampling_factors = c(1,1.25,2.25,1.85,3,4.5,6.6,4.6,5,9,35),
+  max_depth = 5,
+  min_rows = 10,
+  learn_rate = 0.1,
+  learn_rate_annealing = 1,
+  col_sample_rate = 1,
+  sample_rate = 0.9,
+  ntrees = 60,
+  score_tree_interval = 10#,
+  #stopping_metric = 'misclassification',
+  # stopping_tolerance = 0.005
+)
+
+accshow(fit_gbm1,test1,T)
+
+
+
+
+
 
 gc()
 
 
 
-fit_rf <- h2o.randomForest(
-  x = colnames(train)[-c(1)] , 
+fit_rf1 <- h2o.randomForest(
+  x = colnames(train1)[-c(1)] , 
   y = 'open_channels', 
-  training_frame = train,  # trn,   
-  validation_frame = test,
+  training_frame = train1,  # trn,   
+  validation_frame = test1,
   balance_classes = T,
   
-  ntrees = 130,
-  max_depth = 18,
+  ntrees = 100,
+  max_depth = 12,
   min_rows = 1,
   nbins = 20,
-  sample_rate = .6,
-  col_sample_rate_per_tree = .7,
-  min_split_improvement = .000015
+  #sample_rate = .6,
+  col_sample_rate_per_tree = .9#,
+  #min_split_improvement = .000015
 )
 
-accshow(fit_rf,test,F)
+accshow(fit_rf1,test1,T)
 
 
 
@@ -161,7 +208,9 @@ accshow(fit_rf,test,F)
 #sp=sort(sample(1:2000000,2000))
 #res0=predict(fit_gbm, newdata= tst[sp,])$predict%>% as.data.frame()
 
-res = (predict(fit_gbm, newdata= tst)$predict %>% as.data.frame())$predict# %>% as.numeric() -1
+res = (predict(fit_gbm, newdata= tst)$predict %>% as.data.frame())$predict
+
+res[tst$level_type==2] = (predict(fit_gbm2, newdata= tst2)$predict %>% as.data.frame())$predict %>% as.numeric() -1
 
 
 
@@ -171,7 +220,7 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'fit_gbm super all.csv'))
+write_csv(answer,paste0(path.dir,'fit_gbm_l2 svmLinear_l1.csv'))
 
 
 
