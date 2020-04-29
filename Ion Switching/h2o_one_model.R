@@ -21,7 +21,7 @@ for(lev in 0:1){
     s= als[trn$open_channels==i & trn$level==lev]
     
     if(length(s)>0){
-      id= c(id,s[sample(1:length(s),min(50000,length(s)))])
+      id= c(id,s[sample(1:length(s),min(55000,length(s)))])
     }
     
   }
@@ -35,11 +35,14 @@ h2o.init(nthreads = 6,
          max_mem_size = "9g") 
 
 
-accshow=function(fit,df,get.matrix=F){
+accshow=function(fit,df,get.matrix=F,plotting=T){
   
-  plot(fit)
+  if(plotting){
+      plot(fit)
   
   h2o.varimp_plot(fit)
+  }
+
   
   if(get.matrix){
     h2o.performance(fit, df) %>% print()   
@@ -81,12 +84,12 @@ fit_gbm <- h2o.gbm(
   #verbose = T,
   balance_classes = T,
   #class_sampling_factors = c(1,1.25,2.25,1.85,3,4.5,6.6,4.6,5,9,35),
-  max_depth = 5,
-  min_rows = 10,
+  max_depth = 6,
+  min_rows = 20,
   learn_rate = 0.1,
-  learn_rate_annealing = 0.99,
-  col_sample_rate = 0.8,
-  sample_rate = 0.9,
+  learn_rate_annealing = 1,
+  col_sample_rate = 0.9,
+  sample_rate = 0.5,
   ntrees = 40,
   score_tree_interval = 10#,
   #stopping_metric = 'misclassification',
@@ -100,13 +103,86 @@ accshow(fit_gbm,test,T)
 
 
 
+fit_rf <- h2o.randomForest(
+  x = colnames(train)[-c(2,3,13,4)] , 
+  y = 'open_channels', 
+  training_frame =  train,  #   tr,
+  validation_frame = test,
+  balance_classes = T,
+  
+  ntrees = 100,
+  max_depth = 12,
+  min_rows = 2,
+  nbins = 20,
+  #sample_rate = .6,
+  col_sample_rate_per_tree = .9#,
+  #min_split_improvement = .000015
+)
+
+accshow(fit_rf,test,T)
+
+
+
+nfolds <- 5
+
+my_gbm <- h2o.gbm(  x = colnames(train)[-c(2,3,13,4)] , 
+                    y = 'open_channels', 
+                    training_frame =  train, 
+                  distribution = "multinomial",
+                  
+                  balance_classes = T,
+                  max_depth = 5,
+                  min_rows = 20,
+                  learn_rate = 0.1,
+                  learn_rate_annealing = 1,
+                  col_sample_rate = 0.9,
+                  sample_rate = 0.5,
+                  ntrees = 40,
+                  
+
+                  nfolds = nfolds,
+                  fold_assignment = "Modulo",
+                  keep_cross_validation_predictions = TRUE,
+                  seed = 1)
+
+accshow(my_gbm,test,F)
+
+# Train & Cross-validate a RF
+my_rf <- h2o.randomForest( x = colnames(train)[-c(2,3,13,4)] , 
+                           y = 'open_channels', 
+                           training_frame =  train, 
+                           balance_classes = T,
+                           distribution = "multinomial",
+                          
+                          ntrees = 50,
+                          nfolds = nfolds,
+                          fold_assignment = "Modulo",
+                          keep_cross_validation_predictions = TRUE,
+                          seed = 1)
+
+accshow(my_rf,test,F)
+
+ensemble <- h2o.stackedEnsemble(x = colnames(train)[-c(2,3,13,4)] , 
+                                y = 'open_channels', 
+                                training_frame =  train, 
+                                
+                                model_id = "my_ensemble",
+                                base_models = list(my_gbm, my_rf))
+
+
+accshow(ensemble,test,T,F)
 
 
 
 
 
 
-res = (predict(fit_gbm, newdata= tst)$predict %>% as.data.frame())$predict
+
+
+
+
+
+res = (predict(ensemble, newdata= te)$predict %>% as.data.frame())$predict
 
 res[tst$level_type==2] = (predict(fit_gbm2, newdata= tst2)$predict %>% as.data.frame())$predict %>% as.numeric() -1
 
@@ -118,7 +194,7 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'fit_gbm_l2 svmLinear_l1.csv'))
+write_csv(answer,paste0(path.dir,'ensemble 55k.csv'))
 
 
 

@@ -17,6 +17,21 @@ roll=function(vector,f,window=100){
   
 }
 
+roll.quantile=function(vector,per=0.5,window=100){
+  
+  len=length(vector)
+  
+  result=numeric(length = len)
+  
+  for(i in 1:(len-window+1)){
+    result[i]=as.numeric(quantile(vector[i:(i+window-1)], probs = per)) 
+  }
+  result[(len-window+2):len]=result[len-window+1]
+  
+  return(result)
+  
+}
+
 
 rollmean_=function(vector,window=100){
   
@@ -89,3 +104,4 @@ rollmean=cmpfun(rollmean_)
 rollIQR=cmpfun(rollIQR_)
 rollmin=cmpfun(rollmin_)
 rollmax=cmpfun(rollmax_)
+rollq=cmpfun(roll.quantile)

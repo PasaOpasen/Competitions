@@ -31,7 +31,7 @@ ggplot(tst %>% group_by(batches)%>% slice(sample(1:n(),min(4500,n()))),aes(x=tim
 
 trn %<>% mutate(level_type=ifelse(batches %in% c(4,9),1,2) %>% factor()) 
 tst %<>% mutate(level_type=ifelse(
-  (batches==1 &  time_batch<=30) | (batches==0 & (time_batch > 20 & time_batch <= 30))
+  (batches==1 &  ((time_batch >= 20 &time_batch<=30) | time_batch<=10)) 
                                                 ,1,2) %>% factor()) 
 
 
@@ -101,6 +101,8 @@ tst %<>% mutate(
   level2=ifelse(level_type==2,1,0)
 ) 
 
+trn %<>% mutate(signal2=sign(supersignal)*sqrt(abs(supersignal))) 
+tst %<>% mutate(signal2=sign(supersignal)*sqrt(abs(supersignal))) 
 
 write_csv(trn,paste0(path.dir,'trainsuper.csv'))
 write_csv(tst,paste0(path.dir,'testsuper.csv'))
