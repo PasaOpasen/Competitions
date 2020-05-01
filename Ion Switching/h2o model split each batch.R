@@ -5,8 +5,8 @@ library(magrittr)
 
 path.dir='./ignore_data/'
 
-trn=read_csv(paste0(path.dir,'trainsuper.csv'))
-tst=read_csv(paste0(path.dir,'testsuper.csv'))
+trn=read_csv(paste0(path.dir,'train_best.csv'))
+tst=read_csv(paste0(path.dir,'test_best.csv'))
 
 
 how_many = trn %>% group_by(factor(batches),factor(open_channels)) %>% 
@@ -17,6 +17,8 @@ trn %<>% mutate(signal2=sign(signal)*sqrt(abs(signal))) %>%
   select(-time_batch,-level2,-level_type,-level1,-supersignal)
 tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))  %>% 
   select(-time_batch,-level2,-level_type,-level1,-supersignal)
+
+
 
 als=1:nrow(trn)
 inds=c(0,0,0,0,0,0,1,1,1,1,0)
@@ -36,7 +38,7 @@ for(btc in 0:9){
     if(length(s)>0){
       id= c(id,
             s[sample(1:length(s),
-                     min(1000*k,length(s)
+                     min(1200*k,length(s)
                          ))])
     }
     
@@ -74,8 +76,8 @@ accshow=function(fit,df,get.matrix=F,plotting=T){
 }
 
 
-tr=trn %>% select(-batches)%>% as.h2o()
-te=tst %>% select(-batches)%>% as.h2o()
+tr=trn[,-c(3,4)]%>% as.h2o()
+te=tst[,-c(2,3)]%>% as.h2o()
 
 tr[,2]=as.factor(tr[,2])
 #tr[,12]=as.factor(tr[,12])
@@ -108,7 +110,7 @@ gbm_grid <- h2o.grid(
   search_criteria = list(
     strategy = "RandomDiscrete", 
     max_runtime_secs = 2000,
-    max_models = 1000, seed = 1)
+    max_models = 1000)
 )
 
 
@@ -117,7 +119,7 @@ gbm_grid <- h2o.grid(
 fit_gbm <- h2o.gbm(
   x = colnames(train)[-c(2)] , 
   y = 'open_channels', 
-  training_frame =  train,  #   tr,
+  training_frame =  tr,  #   tr,
   validation_frame = test,
   
   #nfolds = 5,
@@ -127,7 +129,7 @@ fit_gbm <- h2o.gbm(
   balance_classes = F,
   #class_sampling_factors = c(1,1.25,2.25,1.85,3,4.5,6.6,4.6,5,9,35),
   max_depth = 10,
-  min_rows = 20,
+  min_rows =20,
   learn_rate = 0.2,
   learn_rate_annealing = 1,
   col_sample_rate = 0.2,
@@ -218,7 +220,17 @@ accshow(ensemble,test,T,F)
 
 
 
+res = as.numeric((predict(fit_gbm, newdata= te)$predict %>% as.data.frame.array() %>% tbl_df())$predict)
 
+
+
+answer=read_csv(paste0(path.dir,'sample_submission.csv'))
+
+answer$time=format(answer$time,nsmall = 4)
+
+answer$open_channels=res
+
+write_csv(answer,paste0(path.dir,'gbmh2o.csv'))
 
 
 

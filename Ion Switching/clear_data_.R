@@ -5,8 +5,8 @@ library(magrittr)
 
 
 path.dir='./ignore_data/'
-test.dir=paste0(path.dir,'newtest_.csv')
-train.dir=paste0(path.dir,'newtrain_.csv')
+test.dir='newtest_.csv'
+train.dir='newtrain_.csv'
 
 #test.dir=paste0(path.dir,'newtest_pca.csv')
 #train.dir=paste0(path.dir,'newtrain_pca.csv')
@@ -15,33 +15,14 @@ tst=read_csv(test.dir)
 trn=read_csv(train.dir)
 
 
-trn %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
-tst %<>% mutate(signal2=sign(signal)*sqrt(abs(signal)))
+gd = sapply(trn, function(x){
+  return(
+    is.numeric(x) & sum(is.na(x))/5e6<0.05
+  )
+})
 
-# delete bad predictors
-
-inds=nearZeroVar(tst)
-nms=colnames(trn)[inds]
-
-trn=trn[,-inds]
-tst=tst[,-(inds-1)]
-
-summary(trn)
-summary(tst)
-
-trn=trn[,-24]
-tst=tst[,-(24-1)]
-
-
-write_csv(trn,paste0(path.dir,'newtrain.csv'))
-write_csv(tst,paste0(path.dir,'newtest.csv'))
-
-
-write_csv(trn,paste0(path.dir,'newtrain_pca.csv'))
-write_csv(tst,paste0(path.dir,'newtest_pca.csv'))
-
-cv1=trainControl(method="cv",number=6,summaryFunction = f1,verboseIter = T)
-cv2=trainControl(method = 'none',verboseIter = T)
+trn = trn[,gd]
+tst=tst[,colnames(trn)[-2]]
 
 # replace NA by median
 
@@ -52,18 +33,38 @@ gc()
 trn[,-2]<-predict(mt,trn[,-2])
 tst<-predict(mt,newdata=tst)
 
+nms=c('signalAbs','signalSquare','signaleSqRo','signale33','mea_51','max_1001','signal_M101','F2','signalMax','signal75')
+
+write_csv(trn,train.dir)
+write_csv(tst,test.dir)
+
+
+trn=trn %>% select(-all_of(nms))
+tst=tst%>% select(-all_of(nms))
 
 # pca
 
-mt=preProcess(trn[,-c(1:4)],method='pca',verbose = T)
+mt=preProcess(trn[,-c(2:4)],method='pca',verbose = T)
 
-trn=cbind(trn[,1:4],predict(mt,trn[,-c(1:4)]))
+mt2=preProcess(trn[,-c(2:4)],method='ica',verbose = T,n.comp=11)
 
-tst=cbind(tst[,1:3],predict(mt,tst[,-c(1:3)]))
+mt3=preProcess(trn[,1], method=c("YeoJohnson"),verbose = T)
 
 
-write_csv(trn,paste0(path.dir,'newtrain_pca.csv'))
-write_csv(tst,paste0(path.dir,'newtest_pca.csv'))
+trn[,1]=predict(mt3,trn[,1])
+trn.pca=predict(mt,trn[,-c(2:4)])
+trn.ica=predict(mt2,trn[,-c(2:4)])
+trn=cbind(trn[,1:4],trn.pca,trn.ica)
+
+write_csv(trn,paste0(path.dir,'train_best.csv'))
+
+
+tst[,1]=predict(mt3,tst[,1])
+tst.pca=predict(mt,tst[,-c(2:3)])
+tst.ica=predict(mt2,tst[,-c(2:3)])
+tst=cbind(tst[,1:3],tst.pca,tst.ica)
+
+write_csv(tst,paste0(path.dir,'test_best.csv'))
 
 
 # boxcox
@@ -93,4 +94,4 @@ for(i in c(300,200,100,50,25)){
 }
 
 
-corrplot::corrplot(cor(trn),method = 'number')
+corrplot::corrplot(cor(trn[,-c(1:4)]),method = 'number')
