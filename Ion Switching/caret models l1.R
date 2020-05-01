@@ -60,6 +60,22 @@ models=c(
   'parRF'
 )
 
+
+
+models=c(
+  'elm',
+  'avNNet',
+  'monmlp',
+  'mlp',
+  'mlpML',
+  'mlpSGD',
+  'nnet',
+  'pcaNNet',
+  'rbf',
+  'dnn'
+)
+
+
 grids=list(
   'lda2'=expand.grid(dimen=0),
   'naive_bayes'=expand.grid(laplace=0,usekernel=T, adjust=seq(3,4,length.out = 12)),
@@ -82,8 +98,8 @@ for(ft in models){
   cl <- makePSOCKcluster(6)
   registerDoParallel(cl)
   
-  .fit=train(open_channels ~ PC1 + PC2 + PC3 + PC4 + PC5+ PC6+PC7+
-               sin(signal)+signal2+time_batch+
+  .fit=train(open_channels ~ PC1 + PC2 + PC3 + PC4 + PC5+ #PC6+PC7+
+               sin(signal)+signal2+#time_batch+
                signal+q5+q15+q25+q35+q45+q55+q65+q75+q85+q95
              ,
              data=train1,

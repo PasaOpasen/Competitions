@@ -21,11 +21,14 @@ h2o.init(nthreads = 6,
          max_mem_size = "9g") 
 
 
-accshow=function(fit,df,get.matrix=F){
+accshow=function(fit,df,get.matrix=F, plot=T){
   
+  if(plot){
   plot(fit)
   
-  h2o.varimp_plot(fit)
+  h2o.varimp_plot(fit)    
+  }
+
   
   if(get.matrix){
     h2o.performance(fit, df) %>% print()   
@@ -201,7 +204,7 @@ nfolds <- 5
 
 my_gbm <- h2o.gbm(  x = colnames(train1)[-c(2)] , 
                     y = 'open_channels', 
-                    training_frame =  trn1, 
+                    training_frame =  train1, 
                     distribution = "multinomial",
                     balance_classes = T,
 
@@ -226,7 +229,7 @@ accshow(my_gbm,test1,F)
 
 my_rf <- h2o.randomForest( x = colnames(train1)[-c(2)] , 
                            y = 'open_channels', 
-                           training_frame =  trn1, 
+                           training_frame =  train1, 
                            distribution = "multinomial",
                            balance_classes = T,
                            
@@ -245,9 +248,9 @@ my_rf <- h2o.randomForest( x = colnames(train1)[-c(2)] ,
 accshow(my_rf,test1,F)
 
 
-my_dl <- h2o.randomForest( x = colnames(train1)[-c(2,3,11,9,10)] , 
+my_dl <- h2o.deeplearning( x = colnames(train1)[-c(2,3,11,9,10)] , 
                            y = 'open_channels', 
-                           training_frame =  trn1, 
+                           training_frame =  train1, 
                            distribution = "multinomial",
                            balance_classes = T,
                            
@@ -273,12 +276,12 @@ my_dl <- h2o.randomForest( x = colnames(train1)[-c(2,3,11,9,10)] ,
 accshow(my_dl,test1,F)
 
 
-ensemble <- h2o.stackedEnsemble(x = colnames(train)[-c(2)] , 
+ensemble <- h2o.stackedEnsemble(x = colnames(train1)[-c(2)] , 
                                 y = 'open_channels', 
-                                training_frame =  train, 
+                                training_frame =  train1, 
                                 
                                 model_id = "my_ensemble",
-                                base_models = list(my_gbm, my_rf))
+                                base_models = list(my_gbm, my_rf,my_dl))
 
 
 accshow(ensemble,test1,T,F)
@@ -289,7 +292,7 @@ accshow(ensemble,test1,T,F)
 #res0=predict(fit_gbm, newdata= tst[sp,])$predict%>% as.data.frame()
 
 
-res[levs==1] = as.numeric((predict(fit_gbm1, newdata= tst1)$predict %>% as.data.frame.array() %>% tbl_df())$predict)
+res[levs==1] = as.numeric((predict(ensemble, newdata= tst1)$predict %>% as.data.frame.array() %>% tbl_df())$predict)
 
 
 answer=read_csv(paste0(path.dir,'sample_submission.csv'))
@@ -298,7 +301,7 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'l1=gbm.csv'))
+write_csv(answer,paste0(path.dir,'l1=ens.csv'))
 
 
 

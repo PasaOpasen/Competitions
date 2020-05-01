@@ -363,3 +363,7 @@ MigrationBackup/
 /Ion Switching/parRF mtry=3 count = 22000.rdata
 /Ion Switching/rf mtry=2 count = 22000.rdata
 /Ion Switching/svmLinear3000_l1.rdata
+/Ion Switching/newtest_.csv
+/Ion Switching/newtrain_.csv
+/Ion Switching/test for py.csv
+/Ion Switching/train for py.csv

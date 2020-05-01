@@ -48,10 +48,10 @@ f1_ <- function (obs,pred) {
 }
 
 
-data.path='D:/liverpool-ion-switching/'
+data.path='./ignore_data/'
 
-train.path=paste0(data.path,'train_clean','.csv')
-test.path=paste0(data.path,'test_clean','.csv')
+train.path=paste0(data.path,'train_clean_','.csv')
+test.path=paste0(data.path,'test_clean_','.csv')
 sample.path=paste0(data.path,'sample_submission','.csv')
 
 
