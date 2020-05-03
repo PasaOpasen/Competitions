@@ -29,7 +29,6 @@ for(lev in 0:1){
   }
   
 }
-
 id=sort(id)
 
 
@@ -130,9 +129,6 @@ accshow(fit_gbm,test,T)
 
 
 
-
-
-
 fit_rf <- h2o.randomForest(
   x = colnames(train)[-c(2,3,13,4)] , 
   y = 'open_channels', 
@@ -150,6 +146,46 @@ fit_rf <- h2o.randomForest(
 )
 
 accshow(fit_rf,test,T)
+
+
+
+
+
+
+fit_svm <- h2o.psvm(
+  x = colnames(train)[-c(2,12)] , 
+  y = 'open_channels', 
+  training_frame =  train,  #   tr,
+  validation_frame = test,
+  
+  hyper_param = 1,
+  gamma = -1,
+  
+  rank_ratio = -1,
+  positive_weight = 1,
+  negative_weight = 1,
+  disable_training_metrics = TRUE,
+  sv_threshold = 1e-04,
+  fact_threshold = 1e-05,
+  feasible_threshold = 0.001,
+  surrogate_gap_threshold = 0.001,
+  
+  mu_factor = 10,
+  max_iterations = 200
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -229,10 +265,6 @@ write_csv(answer,paste0(path.dir,'bestpy.csv'))
 
 
 
-
-library(reticulate)
-use_python(python = "C:/ProgramData/Anaconda3/python.exe")
-py_install("pandas")
 
 
 

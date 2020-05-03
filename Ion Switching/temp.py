@@ -4,6 +4,7 @@ Spyder Editor
 
 This is a temporary script file.
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -86,7 +87,7 @@ tr=StandardScaler()
 X = tr.fit_transform(X)
 
 
-X_train, X_test, y_train, y_test =  train_test_split(X, y, test_size=.02, train_size=.01, shuffle = True )
+X_train, X_test, y_train, y_test =  train_test_split(X, y, test_size=.1, train_size=.005, shuffle = True )
 
 
 
@@ -118,16 +119,90 @@ gr.fit(X_train, y_train)
 
 
 
+params = [{
+    'splitter':["best"],
+    'max_depth':[8,9,10,11,12,13,14,15,16,17],
+    'class_weight':['balanced']
+           }]
+
+clf= DecisionTreeClassifier()
+
+gr= GridSearchCV(clf,params,cv=5,verbose=1)
+
+gr.fit(X_train, y_train)
 
 
 
-clf = SVC(C=0.1, kernel = "poly", degree=3, coef0=1)
+params = [{
+'reg_param':[0,0.0001,0.001,0.01,0.05,0.1,1,2]
+           }]
+
+clf= QuadraticDiscriminantAnalysis()
+
+gr= GridSearchCV(clf,params,cv=5,verbose=1)
+
+gr.fit(X_train, y_train)
+
+
+
+
+params = [{
+'hidden_layer_sizes':[(100,),(50,50,),(40,40,40,),(160,),(20,20,),(30,20,)],
+'activation':['tanh','logistic','relu'],
+'alpha':[0,0.0001,0.001,0.01,1],
+'shuffle':[True,False],
+'beta_1':[0.8,0.9,0.95,0.99,0.999],
+'beta_2':[0.8,0.9,0.95,0.99,0.999],
+'max_iter':[1000]
+           }]
+
+clf= MLPClassifier()
+
+gr=sklearn.model_selection.RandomizedSearchCV(clf,params,n_iter=50,cv=5,verbose=1)
+
+#gr= GridSearchCV(clf,params,cv=5,verbose=1)
+
+gr.fit(X_train, y_train)
+
+
+
+
+
+
+
+clf = DecisionTreeClassifier(class_weight='balanced', max_depth=12)
 clf.fit(X, y)
 
 
+clf = QuadraticDiscriminantAnalysis()
+clf.fit(X, y)
+
+clf = SVC(C=0.1, kernel = "poly", degree=3, coef0=1,verbose=1)
+
+clf.fit(X_train, y_train)
 
 
-clf = MLPClassifier(alpha=0.1, max_iter=100, verbose=True)
+T= pd.read_csv('test for py.csv')
+T = tr.transform(T)
+
+predictions= clf.predict(T)
+
+pd.DataFrame(predictions).to_csv('best py result.csv')
+
+
+
+
+
+clf = MLPClassifier(activation='tanh', alpha=0.01, batch_size='auto', beta_1=0.8,
+              beta_2=0.8, early_stopping=False, epsilon=1e-08,
+              hidden_layer_sizes=(160,), learning_rate='constant',
+              learning_rate_init=0.001, max_fun=15000, max_iter=1000,
+              momentum=0.9, n_iter_no_change=10, nesterovs_momentum=True,
+              power_t=0.5, random_state=None, shuffle=True, solver='adam',
+              tol=0.0001, validation_fraction=0.1, verbose=1,
+              warm_start=False)
+
+
 
 clf = QuadraticDiscriminantAnalysis() 
 
