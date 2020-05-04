@@ -68,8 +68,8 @@ tr[,2]=as.factor(tr[,2])
 #te[,11]=as.factor(te[,11])
 
 
-p = h2o.splitFrame(data=tr[id,] ,ratios = 0.8)
-
+#p = h2o.splitFrame(data=tr[id,] ,ratios = 0.8)
+p = h2o.splitFrame(data=tr[id,] ,ratios = 0.05)
 train=p[[1]]
 test=p[[2]]
 
@@ -78,13 +78,13 @@ test=p[[2]]
 gbm_grid <- h2o.grid(
   'gbm',
   grid_id = 'gr',
-  x = colnames(train)[-c(2,12)] , 
+  x = colnames(train)[-c(2,11,12)] , 
   y = 'open_channels', 
   training_frame =  train, # trn1,  #  
   #validation_frame = test1,
   nfolds=8,
   hyper_params = list(
-    balance_classes = T,
+    balance_classes = c(T,F),
     max_depth = c(3,4,5,6,7,8,9,10),
     min_rows = c(10,20,30,40,50),
     learn_rate = c(0.05,0.1,0.2,0.3),
@@ -102,23 +102,23 @@ gbm_grid <- h2o.grid(
 
 
 fit_gbm <- h2o.gbm(
-  x = colnames(train)[-c(2,12)] , 
+  x = colnames(train)[-c(2,11,12)] , 
   y = 'open_channels', 
-  training_frame =  train,  #   tr,
-  validation_frame = test,
+  training_frame =   tr,  #train,  
+  #validation_frame = test,
   
   #nfolds = 5,
   #fold_assignment = 'Stratified',
   
   #verbose = T,
-  balance_classes = T,
+  balance_classes = F,
   #class_sampling_factors = c(1,1.25,2.25,1.85,3,4.5,6.6,4.6,5,9,35),
-  max_depth = 3,
-  min_rows = 40,
-  learn_rate = 0.2,
+  max_depth = 8,
+  min_rows = 30,
+  learn_rate = 0.1,
   learn_rate_annealing = 1,
-  col_sample_rate = 1.0,
-  sample_rate = 0.7,
+  col_sample_rate = 0.5,
+  sample_rate = 0.8,
   ntrees = 40,
   score_tree_interval = 10#,
   #stopping_metric = 'misclassification',
@@ -245,12 +245,14 @@ accshow(ensemble,test,T,F)
 
 
 
+rs=predict(fit_gbm, newdata= te)
 
 
-
-res = (predict(ensemble, newdata= te)$predict %>% as.data.frame())$predict
+res = (rs$predict %>% as.data.frame())$predict
 
 res[tst$level_type==2] = (predict(fit_gbm2, newdata= tst2)$predict %>% as.data.frame())$predict %>% as.numeric() -1
+
+
 
 
 
@@ -260,7 +262,44 @@ answer$time=format(answer$time,nsmall = 4)
 
 answer$open_channels=res
 
-write_csv(answer,paste0(path.dir,'bestpy.csv'))
+write_csv(answer,paste0(path.dir,'last_gbm.csv'))
+
+
+
+
+
+
+
+vec = apply(rs[,-1] %>% as.data.frame(), 1, function(x) max(x) > 0.9 )
+
+answer=read_csv('r942.csv')
+
+answer$time=format(answer$time,nsmall = 4)
+
+answer$open_channels[vec]=res[vec] %>% as.character()
+
+write_csv(answer,paste0(path.dir,'l9.csv'))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

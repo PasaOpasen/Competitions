@@ -182,12 +182,8 @@ clf = SVC(C=0.1, kernel = "poly", degree=3, coef0=1,verbose=1)
 clf.fit(X_train, y_train)
 
 
-T= pd.read_csv('test for py.csv')
-T = tr.transform(T)
 
-predictions= clf.predict(T)
 
-pd.DataFrame(predictions).to_csv('best py result.csv')
 
 
 
