@@ -87,7 +87,23 @@ tr=StandardScaler()
 X = tr.fit_transform(X)
 
 
-X_train, X_test, y_train, y_test =  train_test_split(X, y, test_size=.1, train_size=.005, shuffle = True )
+X_train, X_test, y_train, y_test =  train_test_split(X, y, test_size=.1, train_size=.01, shuffle = True )
+
+
+
+bag_clf = sklearn.ensemble.BaggingClassifier(
+    DecisionTreeClassifier(max_depth=12), n_estimators=500,
+    max_samples=10000,bootstrap=1,n_jobs=-1
+    )
+
+bag_clf.fit(X_train,y_train)
+bag_clf.score(X_test,y_test)
+
+
+bag_clf.fit(X,y)
+
+
+
 
 
 
@@ -116,6 +132,25 @@ clf= SVC()
 gr= GridSearchCV(clf,params,cv=5,verbose=1)
 
 gr.fit(X_train, y_train)
+
+
+
+
+
+
+params = [{
+'C':[10,20,30,50,70,100],
+'loss':['hinge'],
+'max_iter':[5000]
+           }]
+
+clf= LinearSVC()
+
+gr= GridSearchCV(clf,params,cv=5,verbose=1)
+
+gr.fit(X_train, y_train)
+
+
 
 
 
@@ -175,7 +210,9 @@ clf.fit(X, y)
 
 
 clf = QuadraticDiscriminantAnalysis()
-clf.fit(X, y)
+clf.fit(X_train, y_train)
+clf.score(X_test, y_test)
+
 
 clf = SVC(C=0.1, kernel = "poly", degree=3, coef0=1,verbose=1)
 
@@ -232,7 +269,7 @@ ft.fit(X, y)
 
 #ft.score(X,y)
 
-predictions= ft.predict(T)
+predictions= bag_clf.predict(T)
 
 pd.DataFrame(predictions).to_csv('best py result.csv')
 
@@ -242,11 +279,16 @@ pd.DataFrame(predictions).to_csv('best py result.csv')
 
 
 
+ns = X[2000000:2500000,0]
+time=np.linspace(0.0001,50,500000)
 
+#ns= pd.Series([(time[i],ns[i]) for i in range(500000) ])
 
+ns=pd.Series(ns)
 
+ns.describe()
 
-
+ns.plot()
 
 
 
