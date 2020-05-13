@@ -22,7 +22,21 @@ anim_save("firstan.gif")
 
 
 
+data=dt %>% filter(batches == 4)
 
+dif = data$signal - c(0,data$signal[1:(nrow(data)-1)])
+cbind(data$signal,dif)
+
+data %<>% ungroup() %>%  mutate(corn = atan(dif))
+
+data %>% slice(1:500) %>% 
+ggplot(
+  aes(x=time, y=corn))+
+  geom_line()+
+  geom_point(aes(col=open_channels))+ theme_bw()
+
+
+data=data %>% slice(1:500) 
 
 
 data=dt %>% filter(batches == 4) %>% slice(1:500) 
@@ -37,7 +51,7 @@ data$color <- mycolors[ data$chan + 1 ]
 # Plot
 par(mar=c(0,0,0,0))
 plot3d( 
-  x=data$time, y=data$signal, z=abs(fft(data$signal)), 
+  x=data$time, y=data$signal, z=sin(data$corn)*data$signal, 
   col = data$color, 
   type = 's', 
   #radius = .1,
